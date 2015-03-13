@@ -38,7 +38,7 @@ from mailman.config.config import external_configuration # pylint: disable=impor
 import requests
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mailman.archiver")
 
 
 @implementer(IArchiver)
@@ -48,7 +48,7 @@ class Archiver(object):
 
     def __init__(self):
         self._base_url = None
-        self._auth = None
+        self._api_key = None
 
     @property
     def base_url(self):
@@ -59,12 +59,12 @@ class Archiver(object):
         return self._base_url
 
     @property
-    def auth(self):
+    def api_key(self):
         # Not running _load_conf() on init makes it easier to test:
         # no valid mailman config is required
-        if self._auth is None:
+        if self._api_key is None:
             self._load_conf()
-        return self._auth
+        return self._api_key
 
     def _load_conf(self):
         """
@@ -75,8 +75,9 @@ class Archiver(object):
         archiver_config = external_configuration(
                 config.archiver.hyperkitty.configuration)
         self._base_url = archiver_config.get("general", "base_url")
-        self._auth = (archiver_config.get("general", "api_user"),
-                      archiver_config.get("general", "api_pass"))
+        if not self._base_url.endswith("/"):
+            self._base_url += "/"
+        self._api_key = archiver_config.get("general", "api_key")
 
     def list_url(self, mlist):
         """Return the url to the top of the list's archive.
@@ -85,8 +86,9 @@ class Archiver(object):
         :returns: The url string.
         """
         result = requests.get(urljoin(self.base_url, "api/mailman/urls"),
-            params={"mlist": mlist.fqdn_listname}, auth=self.auth)
-        url = result.json["url"]
+            params={"mlist": mlist.fqdn_listname, "key": self.api_key})
+        # TODO: handle failures (check result.status_code)
+        url = result.json()["url"]
         return urljoin(self.base_url, url)
 
     def permalink(self, mlist, msg):
@@ -102,9 +104,10 @@ class Archiver(object):
         """
         msg_id = msg['Message-Id'].strip().strip("<>")
         result = requests.get(urljoin(self.base_url, "api/mailman/urls"),
-            params={"mlist": mlist.fqdn_listname, "msgid": msg_id},
-            auth=self.auth)
-        url = result.json["url"]
+            params={"mlist": mlist.fqdn_listname,
+                    "msgid": msg_id, "key": self.api_key})
+        # TODO: handle failures (check result.status_code)
+        url = result.json()["url"]
         return urljoin(self.base_url, url)
 
     def archive_message(self, mlist, msg):
@@ -116,10 +119,11 @@ class Archiver(object):
             be calculated.
         """
         result = requests.post(urljoin(self.base_url, "api/mailman/archive"),
+            params={"key": self.api_key},
             data={"mlist": mlist.fqdn_listname},
-            files={"message": ("message.txt", msg.as_string())},
-            auth=self.auth)
-        url = urljoin(self.base_url, result.json["url"])
+            files={"message": ("message.txt", msg.as_string())})
+        # TODO: handle failures (check result.status_code)
+        url = urljoin(self.base_url, result.json()["url"])
         logger.info("HyperKitty archived message %s to %s",
                     msg['Message-Id'].strip(), url)
         return url
