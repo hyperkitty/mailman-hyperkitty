@@ -24,7 +24,7 @@ from setuptools import setup, find_packages
 
 setup(
     name            = 'mailman-hyperkitty',
-    version         = '0.1',
+    version         = '0.2',
     description     = 'Mailman archiver plugin for HyperKitty',
     long_description= open("README.rst").read(),
     author='HyperKitty Developers',
