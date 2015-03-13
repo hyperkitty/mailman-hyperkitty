@@ -26,10 +26,7 @@ This will be imported by Mailman Core and must thus be Python3-compatible.
 
 from __future__ import absolute_import, unicode_literals
 
-try:
-    from urllib.parse import urljoin # PY3  # pylint: disable=no-name-in-module
-except ImportError:
-    from urlparse import urljoin # PY2      # pylint: disable=no-name-in-module
+from urllib.parse import urljoin
 
 from zope.interface import implementer
 from mailman.interfaces.archiver import IArchiver
@@ -75,7 +72,7 @@ class Archiver(object):
         archiver_config = external_configuration(
                 config.archiver.hyperkitty.configuration)
         self._base_url = archiver_config.get("general", "base_url")
-        if not self._base_url.endswith("/"):
+        if not self._base_url.endswith("/"): # pylint: disable=no-member
             self._base_url += "/"
         self._api_key = archiver_config.get("general", "api_key")
 

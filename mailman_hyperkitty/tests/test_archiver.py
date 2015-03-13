@@ -19,6 +19,7 @@
 # Author: Aurelien Bompard <abompard@fedoraproject.org>
 #
 
+# pylint: disable=protected-access,too-few-public-methods,no-self-use
 
 import json
 from unittest import TestCase
@@ -113,7 +114,7 @@ class ArchiverTestCase(TestCase):
             self.assertTrue(logger.info.called)
         self.assertEqual(url, "http://lists.example.com" + relative_url)
         #print(self.requests.post.call_args_list)
-        self.requests.post.assert_called_with(
+        self.requests.post.assert_called_with( # pylint: disable=no-member
             "http://lists.example.com/api/mailman/archive",
             params={'key': 'DummyKey'},
             data={'mlist': 'list@lists.example.com'},
