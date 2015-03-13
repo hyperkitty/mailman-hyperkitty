@@ -39,6 +39,6 @@ setup(
         'requests',
         'zope.interface',
         ],
-    test_requires = ["mock"],
+    test_requires = ["mock", "nose2"],
     test_suite = 'nose2.collector.collector',
     )

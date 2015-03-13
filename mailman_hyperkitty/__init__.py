@@ -32,9 +32,9 @@ except ImportError:
     from urlparse import urljoin # PY2      # pylint: disable=no-name-in-module
 
 from zope.interface import implementer
-from mailman.interfaces.archiver import IArchiver # pylint: disable=import-error
-from mailman.config import config # pylint: disable=import-error
-from mailman.config.config import external_configuration # pylint: disable=import-error
+from mailman.interfaces.archiver import IArchiver
+from mailman.config import config
+from mailman.config.config import external_configuration
 import requests
 
 import logging
@@ -79,17 +79,29 @@ class Archiver(object):
             self._base_url += "/"
         self._api_key = archiver_config.get("general", "api_key")
 
+    def _get_url(self, params):
+        params.update({"key": self.api_key})
+        url = urljoin(self.base_url, "api/mailman/urls")
+        result = requests.get(url, params=params)
+        if result.status_code != 200:
+            logger.error("HyperKitty failure on %s: %s (%s)",
+                         url, result.text, result.status_code)
+            return ""
+        try:
+            result = result.json()
+        except ValueError as e:
+            logger.exception(
+                "Invalid response from HyperKitty on %s: %s", url, e)
+            return ""
+        return urljoin(self.base_url, result["url"])
+
     def list_url(self, mlist):
         """Return the url to the top of the list's archive.
 
         :param mlist: The IMailingList object.
         :returns: The url string.
         """
-        result = requests.get(urljoin(self.base_url, "api/mailman/urls"),
-            params={"mlist": mlist.fqdn_listname, "key": self.api_key})
-        # TODO: handle failures (check result.status_code)
-        url = result.json()["url"]
-        return urljoin(self.base_url, url)
+        return self._get_url({"mlist": mlist.fqdn_listname})
 
     def permalink(self, mlist, msg):
         """Return the url to the message in the archive.
@@ -103,12 +115,7 @@ class Archiver(object):
             be calculated.
         """
         msg_id = msg['Message-Id'].strip().strip("<>")
-        result = requests.get(urljoin(self.base_url, "api/mailman/urls"),
-            params={"mlist": mlist.fqdn_listname,
-                    "msgid": msg_id, "key": self.api_key})
-        # TODO: handle failures (check result.status_code)
-        url = result.json()["url"]
-        return urljoin(self.base_url, url)
+        return self._get_url({"mlist": mlist.fqdn_listname, "msgid": msg_id})
 
     def archive_message(self, mlist, msg):
         """Send the message to the archiver.
@@ -118,12 +125,21 @@ class Archiver(object):
         :returns: The url string or None if the message's archive url cannot
             be calculated.
         """
-        result = requests.post(urljoin(self.base_url, "api/mailman/archive"),
-            params={"key": self.api_key},
+        url = urljoin(self.base_url, "api/mailman/archive")
+        result = requests.post(url, params={"key": self.api_key},
             data={"mlist": mlist.fqdn_listname},
             files={"message": ("message.txt", msg.as_string())})
-        # TODO: handle failures (check result.status_code)
-        url = urljoin(self.base_url, result.json()["url"])
+        if result.status_code != 200:
+            logger.error("HyperKitty failure on %s: %s (%s)",
+                         url, result.text, result.status_code)
+            raise ValueError(result.text)
+        try:
+            result = result.json()
+        except ValueError as e:
+            logger.exception(
+                "Invalid response from HyperKitty on %s: %s", url, e)
+            raise
+        archived_url = urljoin(self.base_url, result["url"])
         logger.info("HyperKitty archived message %s to %s",
-                    msg['Message-Id'].strip(), url)
-        return url
+                    msg['Message-Id'].strip(), archived_url)
+        return archived_url
