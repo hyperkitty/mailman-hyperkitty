@@ -32,9 +32,16 @@ setup(
     url="https://fedorahosted.org/hyperkitty/",
     license         = 'GPLv3',
     keywords        = 'email',
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Topic :: Communications :: Email :: Mailing List Servers",
+        "Programming Language :: Python :: 3",
+        ],
     packages        = find_packages(),
     include_package_data = True,
     install_requires = [
+        'setuptools',
         'mailman',
         'requests',
         'zope.interface',
