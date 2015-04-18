@@ -1,8 +1,8 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           mailman3-hyperkitty
-Version:        0.3
-Release:        1%{?dist}
+Version:        1.0
+Release:        0.1.rc1%{?dist}
 Summary:        Mailman archiver plugin for HyperKitty
 
 License:        GPLv3
